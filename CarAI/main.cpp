@@ -43,7 +43,7 @@ void updateGame();
 void drawGame();
 void drawGame(HDC &hdc);
 void drawFrame(HDC &hdc, HWND);
-void getKeys();
+//void getKeys();
 void getAIPopulation();
 void sortPopulation();
 
@@ -54,10 +54,15 @@ void sortPopulation();
 float playerx = WINDOW_WIDTH/2; //Where player will be placed on the X axis, so in this example its half of the window 
 float playery = WINDOW_HEIGHT/2; //Where player will be placed on the Y axis, so in this example its half the window
 
+
+//Start Coordinates
+int startX = 150;
+int startY = 150;
+
 //Rotation
 float px = 15; 
 float py = 0; 
-float playerRot = 0; // Player rotation
+float playerRot = 0; 
 
 const int numOfInst = 500;			// Starting number of instructions
 int instructions[numOfInst];		// Instructions then gets assigned to the instructions variable
@@ -81,17 +86,18 @@ public:
 	float height;	// Goal height
 
 	Goal()	{
-		x = 0; //
+		x = 0;
 		y = 0;
 		width = 0;
 		height = 0;
 	}
 
+	//Goal constructor
 	Goal(int nx, int ny, int nwidth, int nheight) {
-		x = nx;
-		y = ny;
-		width = nwidth; 
-		height = nheight;
+		x = nx; //X axis is set to new x 
+		y = ny; // Y axis is set to the new y 
+		width = nwidth;  //Width is set to the new width
+		height = nheight; //Height is set to the new height
 	}
 };
 
@@ -106,7 +112,7 @@ class Vehicle{
 		int currentInstruction = 0; //Current instruction number
 		int distToGoal = 0; //Distance to goal
 		double fitness = 0; //Fitness of AI
-		double rankFitness = 0;
+		double rankFitness = 0; // Rank of fitness
 		float x = 5; //Starting point for X axis
 		float y = 5; //Starting point for Y axis
 		float px = 15; //Lines for rotation
@@ -123,13 +129,13 @@ class Vehicle{
 			height = 0;
 			for (int i = 0; i < numOfInst; i++) {
 				//instr[i] = 0; //born with the instinct to move right
-				//instr[i] = 4; //SLoth Mode - born to sit still
-				instr[i] = (rand() % 4); //random genome
+				instr[i] = 5; //SLoth Mode - born to sit still
+				//instr[i] = (rand() % 4); //random genome
 			}
 			fitness = 0;
 		}
 
-		//Constructor
+		//Vehicle constructor
 		Vehicle(float nx, float ny, float nwidth, float nheight)
 		{
 			x = nx;
@@ -144,21 +150,27 @@ class Vehicle{
 		}
 };
 
+
+//Wall class - X, Y, Width, Height all will random
+//Wall Population
+
+
+//Create Wall population
+
 Vehicle players[population]; //Sets the population of the Vehicle class e.g. 20 or 30
 
 int generation; //Declaration for generation number
 float totalFitness; // Declaration of totalFitness
 
 void evolve(); //Forward declaration for evolve function
-void decode(Vehicle); // Not sure if this is needed, the function is currently blank
 
 Vehicle& selection(); // Selection method pointer which requires the Vehicle class
 Vehicle& tournementSelection(); //Tournement selection which requires 
 Vehicle& rankSelection(); // Rank selection
 
 
-void crossOver(Vehicle&, Vehicle&, Vehicle&, Vehicle&);
-void mutate(Vehicle&);
+void crossOver(Vehicle&, Vehicle&, Vehicle&, Vehicle&); //Crossover requires a dad, mum, baby1, baby2. They will be created with Vehicle instance
+void mutate(Vehicle&); //Mutate requires Vehicle
 void updateFitness();
 
 
@@ -458,8 +470,8 @@ void initalizeGame()
 	//Loop through population each population and initalizse the starting point from the players instance
 	for (int i = 0; i < population; i++)
 	{
-		players[i].x = 200;
-		players[i].y = 200;
+		players[i].x = startX;
+		players[i].y = startY;
 	}
 
 	//Loop through the number of instructions and apply random instructions
@@ -481,6 +493,9 @@ void drawGame(HDC &hdcBackBuffer)
 		LineTo(hdcBackBuffer, players[i].x + 10 + players[i].px, players[i].y + 10 + players[i].py);
 	}
 	
+	//Draw wall population (Similar to AI population)
+
+
 	//Drawing gameGoal (The object created above)
 	Rectangle(hdcBackBuffer, gameGoal.x, gameGoal.y, gameGoal.x + gameGoal.width, gameGoal.y + gameGoal.height);
 
@@ -518,13 +533,12 @@ void updateGame()
 					MessageBox(NULL, "Success", "The AI has managed to hit the game goal", 0);
 					touchedGoal = true; //Sets the tocuhed goal to true 
 					generationCount = 0;
-					initalizeGame();
+					//initalizeGame();
+					getAIPopulation();
 				}
 			}
 		}
 	}
-
-
 }
 
 //getAIPopulation
@@ -546,8 +560,8 @@ void getAIPopulation()
 
 		for (int i = 0; i < population; i++)
 		{
-			players[i].x = 200;
-			players[i].y = 200;
+			players[i].x = startX;
+			players[i].y = startY;
 			players[i].currentInstruction = 0;
 
 			players[i].px = 15;
@@ -614,14 +628,11 @@ void getAIPopulation()
 }
 
 
-//--------------
-//EVOLVE 
-//--------------
-
+// EVOLVE 
 void evolve()
 {
-	updateFitness();
-	sortPopulation();
+	updateFitness(); //When the AI evolves update the fitness
+	sortPopulation(); //When the AI evolves its sorted
 
 	Vehicle babyPlayers[population];
 
@@ -654,16 +665,9 @@ void evolve()
 	}
 
 }
-void decode(Vehicle)
-{
-	//convert instructions to someGoal usable  
-	//not needed? 
-}
 
 
-//-------------------
-// Update Fitness
-//-------------------
+//Update Fitness
 void updateFitness()
 {
 	totalFitness = 0;
@@ -672,18 +676,16 @@ void updateFitness()
 	{
 		//pythagoras theorem to calculate the absolute distance between car and goal
 
-	
-		float diffx = abs(players[i].x - gameGoal.x);
-		float diffy = abs(players[i].y - gameGoal.y);
+		float diffx = abs(players[i].x - gameGoal.x); // X
+		float diffy = abs(players[i].y - gameGoal.y); // Y
 
-		float diffxy = (diffx * diffx) + (diffy * diffy);
+		float diffxy = (diffx * diffx) + (diffy * diffy); // Calcualtes other side 
 
-		float diffroot = sqrt(diffxy);
+		float diffroot = sqrt(diffxy);// Square root of the other side 
 
-		float fit = 1 / diffroot + 1;
-
-		
-		players[i].fitness = fit;
+		float fit = 1 / diffroot + 1; // So it doesnt divide by 1
+				
+		players[i].fitness = fit; // Player fitness is set to fit 
 
 		totalFitness += fit;
 	}
