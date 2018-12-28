@@ -44,20 +44,21 @@ void drawGame();
 void drawGame(HDC &hdc);
 void drawFrame(HDC &hdc, HWND);
 //void getKeys();
-void getAIPopulation();
-void sortPopulation();
+void getAIplayerPopulation();
+void sortplayerPopulation();
 
 #define CROSSOVER_RATE	0.7 //Probability of a crossover happening
 
-
 //Coordinates
-float playerx = WINDOW_WIDTH/2; //Where player will be placed on the X axis, so in this example its half of the window 
-float playery = WINDOW_HEIGHT/2; //Where player will be placed on the Y axis, so in this example its half the window
+//Must be int instead of floats - https://stackoverflow.com/questions/39602344/error-expression-must-have-integral-or-unscoped-enum-type/39602387
+int playerx = WINDOW_WIDTH/2; //Where player will be placed on the X axis, so in this example its half of the window 
+int playery = WINDOW_HEIGHT/2; //Where player will be placed on the Y axis, so in this example its half the window
 
 
 //Start Coordinates
-int startX = 150;
-int startY = 150;
+int playerStartX = 15;
+int playerStartY = 15;
+
 
 //Rotation
 float px = 15; 
@@ -66,16 +67,15 @@ float playerRot = 0;
 
 const int numOfInst = 500;			// Starting number of instructions
 int instructions[numOfInst];		// Instructions then gets assigned to the instructions variable
-int instPtr = 0;					// Instruction pointer, used in getAIPopulation to identify what number of instruction is currently selected e.g. 300 or 400
-
+int instPtr = 0;					// Instruction pointer, used in getAIplayerPopulation to identify what number of instruction is currently selected e.g. 300 or 400
 double MUTATION_RATE = 0.005;		// The frequency of new mutations in a single genome
 const int chromoLength = numOfInst;	//Chrome length is equal to the number of instructions which is 300
-const int population = 20;			// Number of players allowed on the screen, in this example it's 20
+const int playerPopulation = 20;	// Number of players allowed on the screen, in this example it's 20
 bool gameComplete = false;			// Game success by default is false
 int generationCount = 0;			// Generation count
 int currentInstruction = 0;			//Current instruction is set to 0;
 bool touchedGoal = false;			//If goal is touched
-
+bool touchedWall = false;			//If wall is touched
 
 class Goal {
 public: 
@@ -85,13 +85,6 @@ public:
 	float width;	//Goal width
 	float height;	// Goal height
 
-	Goal()	{
-		x = 0;
-		y = 0;
-		width = 0;
-		height = 0;
-	}
-
 	//Goal constructor
 	Goal(int nx, int ny, int nwidth, int nheight) {
 		x = nx; //X axis is set to new x 
@@ -100,8 +93,6 @@ public:
 		height = nheight; //Height is set to the new height
 	}
 };
-
-//gameGoal created with class Goal
 Goal gameGoal(400, 200, 50, 50); //X and Y & Height and Width 
 
 class Vehicle{
@@ -113,20 +104,15 @@ class Vehicle{
 		int distToGoal = 0; //Distance to goal
 		double fitness = 0; //Fitness of AI
 		double rankFitness = 0; // Rank of fitness
-		float x = 5; //Starting point for X axis
-		float y = 5; //Starting point for Y axis
+		float x = 0; //Starting point for X axis
+		float y = 0; //Starting point for Y axis
 		float px = 15; //Lines for rotation
 		float py = 0; //Lines for rotation
 		float playerRot = 0; //Player rotation
-		float width; //Width of the vehicle
-		float height; //Height of the vehicle
+		float width = 0; //Width of the vehicle
+		float height = 0; //Height of the vehicle
 
 		Vehicle() {
-
-			x = 0;
-			y = 0;
-			width = 0; 
-			height = 0;
 			for (int i = 0; i < numOfInst; i++) {
 				//instr[i] = 0; //born with the instinct to move right
 				instr[i] = 5; //SLoth Mode - born to sit still
@@ -149,15 +135,7 @@ class Vehicle{
 			return instr == p1.instr;
 		}
 };
-
-
-//Wall class - X, Y, Width, Height all will random
-//Wall Population
-
-
-//Create Wall population
-
-Vehicle players[population]; //Sets the population of the Vehicle class e.g. 20 or 30
+Vehicle players[playerPopulation]; //Sets the playerPopulation of the Vehicle class e.g. 20 or 30
 
 int generation; //Declaration for generation number
 float totalFitness; // Declaration of totalFitness
@@ -168,21 +146,37 @@ Vehicle& selection(); // Selection method pointer which requires the Vehicle cla
 Vehicle& tournementSelection(); //Tournement selection which requires 
 Vehicle& rankSelection(); // Rank selection
 
-
 void crossOver(Vehicle&, Vehicle&, Vehicle&, Vehicle&); //Crossover requires a dad, mum, baby1, baby2. They will be created with Vehicle instance
 void mutate(Vehicle&); //Mutate requires Vehicle
 void updateFitness();
 
 
+//Wall Stuff
+class Wall {
+	public:
+		float x;
+		float y;
+		float width;
+		float height;
 
-//---------------------------- WindowProc ---------------------------------//
-//	This is the callback function which handles all the windows messages   //
-//-------------------------------------------------------------------------//
 
-LRESULT CALLBACK WindowProc(HWND   hwnd,
-	UINT   msg,
-	WPARAM wParam,
-	LPARAM lParam)
+	Wall() {}
+
+
+	//Wall Constructor
+	Wall(int newX, int newY, int newWidth, int newHeight) {
+		x = newX;
+		y = newY;
+		width = newWidth;
+		height = newHeight;
+	}
+};
+
+const int wallPopulation = 6;
+Wall walls[wallPopulation];
+
+//Callback for windows messages
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	//create some pens to use for drawing
 	static HPEN BluePen = CreatePen(PS_SOLID, 1, RGB(0, 0, 255));
@@ -363,14 +357,8 @@ LRESULT CALLBACK WindowProc(HWND   hwnd,
 	return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
-//-------------------------------- WinMain -------------------------------
-//
-//	The entry point of the windows program
-//------------------------------------------------------------------------
-int WINAPI WinMain(HINSTANCE hInstance,
-	HINSTANCE hPrevInstance,
-	LPSTR     szCmdLine,
-	int       iCmdShow)
+//Entry Point
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR szCmdLine, int iCmdShow)
 {
 	//handle to our window
 	HWND						hWnd;
@@ -467,11 +455,20 @@ int WINAPI WinMain(HINSTANCE hInstance,
 void initalizeGame()
 {
 
-	//Loop through population each population and initalizse the starting point from the players instance
-	for (int i = 0; i < population; i++)
+	//Loop through playerPopulation each playerPopulation and initalizse the starting point from the players instance
+	for (int i = 0; i < playerPopulation; i++)
 	{
-		players[i].x = startX;
-		players[i].y = startY;
+		players[i].x = playerStartX;
+		players[i].y = playerStartY;
+	}
+
+	//Loop through walls and set the inital coordinates as well as the width and height
+	for (int i = 0; i < wallPopulation; i++)
+	{
+		walls[i].x = rand() % WINDOW_WIDTH;
+		walls[i].y = rand() % WINDOW_HEIGHT;
+		walls[i].width = rand() % 100;
+		walls[i].height = rand() % 100;
 	}
 
 	//Loop through the number of instructions and apply random instructions
@@ -483,8 +480,8 @@ void initalizeGame()
 
 void drawGame(HDC &hdcBackBuffer)
 {
-	//Loop through population and creating x amount of AI's on screen
-	for (int i = 0; i < population; i++)
+	//Loop through playerPopulation and creating x amount of AI's on screen
+	for (int i = 0; i < playerPopulation; i++)
 	{
 		static HBRUSH ltBlueBrush = CreateSolidBrush(RGB(200, 200, 255));
 		SelectObject(hdcBackBuffer, ltBlueBrush);
@@ -493,17 +490,23 @@ void drawGame(HDC &hdcBackBuffer)
 		LineTo(hdcBackBuffer, players[i].x + 10 + players[i].px, players[i].y + 10 + players[i].py);
 	}
 	
-	//Draw wall population (Similar to AI population)
 
-
+	//Draw wall playerPopulation (Similar to AI playerPopulation)
+	for (int i = 0; i < wallPopulation; i++)
+	{
+		static HBRUSH ltBlueBrush = CreateSolidBrush(RGB(200, 200, 255));
+		Rectangle(hdcBackBuffer, walls[i].x, walls[i].y, walls[i].x + walls[i].width, walls[i].y + walls[i].height);
+	}
+	   
 	//Drawing gameGoal (The object created above)
 	Rectangle(hdcBackBuffer, gameGoal.x, gameGoal.y, gameGoal.x + gameGoal.width, gameGoal.y + gameGoal.height);
 
-	//Draw text
+
+	//Title 
 	LPCSTR buffer = "AICar: ";
 	TextOut(hdcBackBuffer, 5, 5, buffer, lstrlen(buffer));
 
-	//Prints generation count out
+	//Generation number
 	TCHAR buf[5];
 	TextOut(hdcBackBuffer, 100, 5, buf, wsprintf(buf, "%d", generationCount));
 	
@@ -514,13 +517,13 @@ void updateGame()
 {
 	//getKeys(); //Manually control the game with arrow keys (Pointless)
 
-	//When the game is complete refetch the AI population 
+	//When the game is complete refetch the AI playerPopulation 
 	if (gameComplete == false)
 	{
-		getAIPopulation();
+		getAIplayerPopulation();
 	}
 
-	for (int p = 0; p < population; p++)
+	for (int p = 0; p < playerPopulation; p++)
 	{
 		//If player x is greater than gameGoal x and player x is less than the gameGoal y + gameGoal width then.....
 		if (players[p].x > gameGoal.x && players[p].x < gameGoal.x + gameGoal.width)
@@ -534,15 +537,34 @@ void updateGame()
 					touchedGoal = true; //Sets the tocuhed goal to true 
 					generationCount = 0;
 					//initalizeGame();
-					getAIPopulation();
+					getAIplayerPopulation();
+				}
+			}
+		}
+	}
+
+	for (int pp = 0; pp < playerPopulation; pp++) 
+	{
+		for (int wp = 0; wp < wallPopulation; wp++)
+		{
+			if(players[pp].x > walls[wp].x && players[pp].x < walls[wp].x + walls[wp].width) 
+			{
+				if (players[pp].y > walls[wp].y && players[pp].y < walls[wp].y + walls[wp].height)
+				{
+					if (touchedWall == false)
+					{
+						//MessageBox(NULL, "Information", "AI hit a wall",0);
+						touchedWall = true;
+						getAIplayerPopulation();
+					}
 				}
 			}
 		}
 	}
 }
 
-//getAIPopulation
-void getAIPopulation()
+//getAIplayerPopulation
+void getAIplayerPopulation()
 {
 
 	//If the currentInstruction is less than the number of instructions then carry on
@@ -555,13 +577,14 @@ void getAIPopulation()
 	if (currentInstruction >= chromoLength)
 	{
 		evolve(); // Crossover and mutate the AI's
-		generationCount++; // Incremen
+		generationCount++; // Increment
 		touchedGoal = false;
+		touchedWall = false;
 
-		for (int i = 0; i < population; i++)
+		for (int i = 0; i < playerPopulation; i++)
 		{
-			players[i].x = startX;
-			players[i].y = startY;
+			players[i].x = playerStartX;
+			players[i].y = playerStartY;
 			players[i].currentInstruction = 0;
 
 			players[i].px = 15;
@@ -571,8 +594,8 @@ void getAIPopulation()
 		currentInstruction = 0; //When the current instruction is greater than of equal to chromo length then set the instrction back to 0;
 	}
 
-	//Loop through population and check instructions
-	for (int i = 0; i < population; i++) 
+	//Loop through playerPopulation and check instructions
+	for (int i = 0; i < playerPopulation; i++) 
 	{
 
 		int inst = players[i].instr[players[i].currentInstruction]; //Grabs current instruction
@@ -627,17 +650,16 @@ void getAIPopulation()
 	}
 }
 
-
 // EVOLVE 
 void evolve()
 {
 	updateFitness(); //When the AI evolves update the fitness
-	sortPopulation(); //When the AI evolves its sorted
+	sortplayerPopulation(); //When the AI evolves its sorted
 
-	Vehicle babyPlayers[population];
+	Vehicle babyPlayers[playerPopulation];
 
 	int newPop = 0;
-	while (newPop<population)
+	while (newPop<playerPopulation)
 	{
 		//Vehicle mum = selection();
 		//Vehicle dad = selection();
@@ -653,26 +675,25 @@ void evolve()
 		mutate(baby1);
 		mutate(baby2);
 
-		//copy babys into babypopulation
+		//copy babys into babyplayerPopulation
 		babyPlayers[newPop] = baby1;
 		babyPlayers[newPop + 1] = baby2;
 		newPop += 2;
 	}
 
-	for (int i = 0; i<population; i++)
+	for (int i = 0; i<playerPopulation; i++)
 	{
 		players[i] = babyPlayers[i];
 	}
 
 }
 
-
 //Update Fitness
 void updateFitness()
 {
 	totalFitness = 0;
 
-	for (int i = 0; i<population; i++)
+	for (int i = 0; i<playerPopulation; i++)
 	{
 		//pythagoras theorem to calculate the absolute distance between car and goal
 
@@ -691,10 +712,7 @@ void updateFitness()
 	}
 }
 
-
-//-------------
 //Selection
-//------------
 Vehicle& selection()
 {
 	float fSlice = (rand()) / (RAND_MAX + 1.0)* totalFitness;
@@ -705,7 +723,7 @@ Vehicle& selection()
 
 	int selectedPlayer = 0;
 
-	for (int i = 0; i<population; i++)
+	for (int i = 0; i<playerPopulation; i++)
 	{
 		total += players[i].fitness;
 
@@ -724,8 +742,8 @@ Vehicle& tournementSelection()
 {
 	int selectedPlayer = 0;
 
-	int p1 = (rand() % population);
-	int p2 = (rand() % population);
+	int p1 = (rand() % playerPopulation);
+	int p2 = (rand() % playerPopulation);
 
 	if (players[p1].fitness > players[p2].fitness)
 	{
@@ -737,14 +755,14 @@ Vehicle& tournementSelection()
 
 }
 
-//Sorts 
-void sortPopulation()
+//Sorts population
+void sortplayerPopulation()
 {
 	//sort in desceding order... To be Checked!! 
 	int i, j;
-	for (i = 0; i < population - 1; i++)
+	for (i = 0; i < playerPopulation - 1; i++)
 	{
-		for (j = 0; j < population - i - 1; j++)
+		for (j = 0; j < playerPopulation - i - 1; j++)
 		{
 			if (players[j].fitness < players[j + 1].fitness)
 			{
@@ -756,22 +774,21 @@ void sortPopulation()
 		}
 	}
 	//set rank fitness based on position of player
-	for (int i = 0; i < population; i++)
+	for (int i = 0; i < playerPopulation; i++)
 	{
-		double temp = (i + 1) / (double)population; //add 1 to stop divide by zero
+		double temp = (i + 1) / (double)playerPopulation; //add 1 to stop divide by zero
 		players[i].rankFitness = temp;
 	}
 }
 
-
 //Rank selection
 Vehicle& rankSelection()
 {
-	float fSlice = (rand()) / (RAND_MAX + 1.0)* population;
+	float fSlice = (rand()) / (RAND_MAX + 1.0)* playerPopulation;
 	float total = 0;
 	int selectedPlayer = 0;
 
-	for (int i = 0; i < population; i++)
+	for (int i = 0; i < playerPopulation; i++)
 	{
 		total += players[i].rankFitness; //Total is set to the players rank fitness
 		if (total > fSlice)
@@ -783,10 +800,7 @@ Vehicle& rankSelection()
 	return players[selectedPlayer];
 }
 
-
-//-----------------
 //Crossover
-//-------------------
 void crossOver(Vehicle&mum, Vehicle&dad, Vehicle&baby1, Vehicle&baby2)
 {
 	if (((rand()) / (RAND_MAX + 1.0)>CROSSOVER_RATE) || mum == dad)
@@ -812,9 +826,7 @@ void crossOver(Vehicle&mum, Vehicle&dad, Vehicle&baby1, Vehicle&baby2)
 	}
 }
 
-//------------
-//MUTATE
-//------------
+//Mutate
 void mutate(Vehicle& currPlayer)
 {
 	for (int bit = 0; bit<chromoLength; bit++)
@@ -833,8 +845,7 @@ void mutate(Vehicle& currPlayer)
 	}
 }
 
-
-//Keyboard input
+//Keyboard input (Tests the AI moves - hasn't being updated since applying the AI functionality)
 void getKeys()
 {
 	
