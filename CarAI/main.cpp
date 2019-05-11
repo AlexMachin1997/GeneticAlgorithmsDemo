@@ -23,6 +23,7 @@
 
 #include <list>
 #include <iostream>
+#include "main.h"
 
 using namespace std;
 
@@ -40,10 +41,7 @@ using namespace std;
 //Forward Declaration of functions
 void initalizeGame();
 void updateGame();
-void drawGame();
 void drawGame(HDC &hdc);
-void drawFrame(HDC &hdc, HWND);
-//void getKeys();
 void getAIPopulation();
 void sortplayerPopulation();
 
@@ -51,91 +49,47 @@ void sortplayerPopulation();
 
 //Coordinates
 //Must be int instead of floats - https://stackoverflow.com/questions/39602344/error-expression-must-have-integral-or-unscoped-enum-type/39602387
-int playerx = WINDOW_WIDTH / 2; //Where player will be placed on the X axis, so in this example its half of the window 
-int playery = WINDOW_HEIGHT / 2; //Where player will be placed on the Y axis, so in this example its half the window
+//int playerx = WINDOW_WIDTH / 2; //Where player will be placed on the X axis, so in this example its half of the window 
+//int playery = WINDOW_HEIGHT / 2; //Where player will be placed on the Y axis, so in this example its half the window
 
 //Start Coordinates
 int playerStartX = 150;
 int playerStartY = 150;
 
-//Rotation
-float px = 15;
-float py = 0;
-float playerRot = 0;
+Goal::Goal()
+{
 
-//AI Variables
-const int numOfInst = 1000;			// Starting number of instructions
-int instructions[numOfInst];		// Instructions then gets assigned to the instructions variable
-int instPtr = 0;					// Instruction pointer, used in getAIPopulation to identify what number of instruction is currently selected e.g. 300 or 400
-double MUTATION_RATE = 0.005;		// The frequency of new mutations in a single genome
-const int chromoLength = numOfInst;	//Chrome length is equal to the number of instructions which is 300
-const int playerPopulation = 20;	// Number of players allowed on the screen, in this example it's 20
-bool gameComplete = false;			// Game success by default is false
-int generationCount = 0;			// Generation count
-int currentInstruction = 0;			//Current instruction is set to 0;
-bool touchedGoal = false;			//If goal is touched
-bool touchedWall = false;			//If wall is touched
+}
 
-class Goal {
-public:
+Goal::Goal(int nx, int ny, int nwidth, int nheight)
+{
+	x = nx;
+	y = ny;
+	width = nwidth;
+	height = nheight;
+}
 
-	float x;		//Goal X axis coordinates
-	float y;		// Goal Y axis coordinates
-	float width;	//Goal width
-	float height;	// Goal height
 
-					//Goal constructor
-	Goal(int nx, int ny, int nwidth, int nheight) {
-		x = nx; //X axis is set to new x 
-		y = ny; // Y axis is set to the new y 
-		width = nwidth;  //Width is set to the new width
-		height = nheight; //Height is set to the new height
-	}
-};
 Goal gameGoal(400, 200, 50, 50); //X and Y & Height and Width 
 
-class Vehicle {
-public:
-
-	const static int numOfInst = chromoLength; // number of instructions are set to the chromo length
-	float instr[numOfInst];
-	int currentInstruction = 0; //Current instruction number
-	int distToGoal = 0; //Distance to goal
-	double fitness = 0; //Fitness of AI
-	double rankFitness = 0; // Rank of fitness
-	float x = 0; //Starting point for X axis
-	float y = 0; //Starting point for Y axis
-	float px = 15; //Lines for rotation
-	float py = 0; //Lines for rotation
-	float playerRot = 0; //Player rotation
-	float width = 0; //Width of the vehicle
-	float height = 0; //Height of the vehicle
-
-	bool wallHit = false;
-
-	Vehicle() {
+Vehicle::Vehicle()
+{
 		for (int i = 0; i < numOfInst; i++) {
 			//instr[i] = 0; //born with the instinct to move right
 			instr[i] = 5; //SLoth Mode - born to sit still
 						  //instr[i] = (rand() % 4); //random genome
 		}
 		fitness = 0;
-	}
+}
 
 	//Vehicle constructor
-	Vehicle(float nx, float ny, float nwidth, float nheight)
+Vehicle::Vehicle(float nx, float ny, float nwidth, float nheight)
 	{
 		x = nx;
 		y = ny;
 		width = nwidth;
 		height = nheight;
 	}
-
-	int operator == (const Vehicle &p1)
-	{
-		return instr == p1.instr;
-	}
-};
 
 Vehicle players[playerPopulation]; //Sets the playerPopulation of the Vehicle class e.g. 20 or 30
 
@@ -153,26 +107,16 @@ void mutate(Vehicle&); //Mutate requires Vehicle
 void updateFitness();
 void collisionCheck();
 
-//Wall Stuff
-class Wall {
-public:
-	float x;
-	float y;
-	float width;
-	float height;
+Wall::Wall()
+{
 
-
-	Wall() {}
-
-
-	//Wall Constructor
-	Wall(int newX, int newY, int newWidth, int newHeight) {
-		x = newX;
-		y = newY;
-		width = newWidth;
-		height = newHeight;
-	}
-};
+}
+Wall::Wall(int newX, int newY, int newWidth, int newHeight) {
+	x = newX;
+	y = newY;
+	width = newWidth;
+	height = newHeight;
+}
 
 const int wallPopulation = 3;
 Wall walls[wallPopulation];
@@ -505,7 +449,7 @@ void drawGame(HDC &hdcBackBuffer)
 	}
 
 	//Drawing single gameGoal, no multiple goals needed
-	static HBRUSH ltBlueBrush = CreateSolidBrush(RGB(60, 179, 113));
+	static HBRUSH ltBlueBrush = CreateSolidBrush(RGB(143, 188, 143));
 	SelectObject(hdcBackBuffer, ltBlueBrush);
 	Rectangle(hdcBackBuffer, gameGoal.x, gameGoal.y, gameGoal.x + gameGoal.width, gameGoal.y + gameGoal.height);
 
@@ -523,7 +467,7 @@ void drawGame(HDC &hdcBackBuffer)
 //updatGame function
 void updateGame()
 {
-	//When the game is complete refetch the AI playerPopulation 
+	//When the game is not complete refetch the AI playerPopulation 
 	if (gameComplete == false)
 	{
 		getAIPopulation(); //Continue to get population
@@ -730,10 +674,10 @@ void evolve()
 	int newPop = 0;
 	while (newPop<playerPopulation)
 	{
-		//Vehicle mum = selection();
-		//Vehicle dad = selection();
-		Vehicle mum = tournementSelection();
-		Vehicle dad = tournementSelection();
+		Vehicle mum = selection();
+		Vehicle dad = selection();
+		//Vehicle mum = tournementSelection();
+		//Vehicle dad = tournementSelection();
 		//Vehicle mum = rankSelection();
 		//Vehicle dad = rankSelection();
 
@@ -911,61 +855,5 @@ void mutate(Vehicle& currPlayer)
 			currPlayer.instr[bit] = newInst;
 
 		}
-	}
-}
-
-//Keyboard input function
-void getKeys()
-{
-
-	if (KEYDOWN(VK_RIGHT) && playerx<600)
-	{
-		//playerx++;
-		playerRot += 0.1f;
-		//2d point rotation - Radians not degrees
-		px = 15 * cos(playerRot) - (0 * sin(playerRot));
-		py = 15 * sin(playerRot) + (0 * cos(playerRot));
-
-	}
-	if (KEYDOWN(VK_LEFT) && playerx>0)
-	{
-		//playerx--;
-		playerRot -= 0.1f;
-		px = 15 * cos(playerRot) - (0 * sin(playerRot));
-		py = 15 * sin(playerRot) + (0 * cos(playerRot));
-
-	}
-
-	if (KEYDOWN(VK_UP) && playery>0)
-	{
-		//translate 2d point
-		//newx = oldx + (velocity*cos(angle))
-		//newy = oldy + (velocity*sin(angle))
-		float x = playerx + (2 * cos(playerRot));
-		float y = playery + (2 * sin(playerRot));
-
-		playerx = x;
-		playery = y;
-	}
-	if (KEYDOWN(VK_DOWN) && playery<600)
-	{
-		playery++;
-	}
-
-	if (KEYDOWN(VK_SPACE))
-	{
-	}
-	if (KEYDOWN(VK_RETURN))
-	{
-		initalizeGame();
-	}
-	// https://docs.microsoft.com/en-us/windows/desktop/inputdev/virtual-key-codes
-	if (KEYDOWN(0x52)) //'R'
-	{
-		initalizeGame();
-	}
-
-	if (KEYDOWN(0x53)) //'S'
-	{
 	}
 }
